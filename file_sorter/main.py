@@ -120,32 +120,64 @@ def generate_new_path_and_name(original_file_path, description, ocr_text, exif_d
     This is the core logic for organization.
     """
     logger.info(f"Generating new path and name for {original_file_path}")
-    # Placeholder logic - this will be highly customized
+    
     file_extension = os.path.splitext(original_file_path)[1].lower()
-    base_name = os.path.basename(original_file_path)
+    original_filename = os.path.basename(original_file_path)
+    now = datetime.now()
 
-    # Example: Use date from EXIF or current date
-    date_str = exif_data.get('DateTimeOriginal', datetime.now().strftime("%Y:%m:%d %H:%M:%S")).split(' ')[0].replace(':', '-')
-    year = date_str.split('-')[0]
-    month_num = date_str.split('-')[1]
-    month_name = datetime.strptime(month_num, "%m").strftime("%B")
+    # 1. Determine the date
+    file_date = None
+    if exif_data.get('DateTimeOriginal'):
+        try:
+            # EXIF format is 'YYYY:MM:DD HH:MM:SS'
+            file_date = datetime.strptime(exif_data['DateTimeOriginal'], '%Y:%m:%d %H:%M:%S')
+        except ValueError:
+            logger.warning(f"Could not parse EXIF date: {exif_data['DateTimeOriginal']}")
+    
+    if not file_date:
+        try:
+            # Fallback to file modification time
+            mtime = os.path.getmtime(original_file_path)
+            file_date = datetime.fromtimestamp(mtime)
+        except Exception as e:
+            logger.error(f"Could not get file modification time: {e}")
+            file_date = now # Final fallback
 
-    # Simple keyword extraction from description/OCR for folder/filename
-    keywords = []
+    date_str = file_date.strftime("%Y-%m-%d")
+    time_str = file_date.strftime("%H%M%S")
+    year = file_date.strftime("%Y")
+    month_num = file_date.strftime("%m")
+    month_name = file_date.strftime("%B")
+
+    # 2. Determine file type and base folder
+    photo_extensions = ['.jpg', '.jpeg', '.png', '.heic', '.dng', '.raw']
+    doc_extensions = ['.pdf', '.doc', '.docx', '.txt']
+    
+    if file_extension in photo_extensions:
+        base_folder = "Photos"
+        target_folder = os.path.join(TARGET_BASE_DIR, base_folder, year, f"{month_num}-{month_name}")
+    elif file_extension in doc_extensions:
+        base_folder = "Documents"
+        target_folder = os.path.join(TARGET_BASE_DIR, base_folder, year)
+    else:
+        base_folder = "Unsorted"
+        target_folder = os.path.join(TARGET_BASE_DIR, base_folder, year)
+
+    # 3. Generate a descriptive name
+    descriptive_part = ""
     if description:
-        keywords.extend([word.lower() for word in description.split() if len(word) > 3 and word.isalpha()])
-    if ocr_text:
-        keywords.extend([word.lower() for word in ocr_text.split() if len(word) > 3 and word.isalpha()])
+        # A simple approach to get a few descriptive words
+        # This can be replaced with a more advanced NLP keyword extraction
+        words = [word.lower() for word in description.split() if len(word) > 4 and word.isalpha()]
+        descriptive_part = "_".join(words[:3]) # Use up to 3 keywords
 
-    # Deduplicate and prioritize keywords
-    unique_keywords = sorted(list(set(keywords)), key=keywords.count, reverse=True)[:3] # Top 3 keywords
+    if not descriptive_part:
+        # Fallback to original filename without extension
+        descriptive_part = os.path.splitext(original_filename)[0].replace(" ", "_")
 
-    # Construct a more descriptive name
-    descriptive_name = "_".join(unique_keywords) if unique_keywords else "untitled"
-    new_filename = f"{date_str}_{descriptive_name}{file_extension}"
+    new_filename = f"{date_str}_{time_str}_{descriptive_part}{file_extension}"
 
-    # Construct folder structure: TARGET_BASE_DIR/Year/MonthName/Keywords/
-    target_folder = os.path.join(TARGET_BASE_DIR, year, f"{month_num}-{month_name}", descriptive_name)
+    # 4. Combine for the full new path
     new_file_path = os.path.join(target_folder, new_filename)
 
     logger.info(f"Generated new path: {new_file_path}")
