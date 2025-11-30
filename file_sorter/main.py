@@ -3,6 +3,7 @@ import json
 import logging
 from flask import Flask, request, jsonify
 import requests
+import exifread
 from datetime import datetime
 
 # --- Configuration ---
@@ -22,22 +23,31 @@ app = Flask(__name__)
 # --- Helper Functions ---
 def get_exif_data(file_path):
     """
-    Extracts EXIF data from an image file.
-    This will require an external library like 'exifread' or a command-line tool.
-    For now, it's a placeholder.
+    Extracts EXIF data from an image file using the exifread library.
     """
     logger.info(f"Attempting to extract EXIF data from {file_path}")
     exif_data = {}
     try:
-        # Placeholder for actual EXIF extraction logic
-        # Example: import exifread; with open(file_path, 'rb') as f: tags = exifread.process_file(f)
-        # Populate exif_data dictionary
-        exif_data['DateTimeOriginal'] = datetime.now().strftime("%Y:%m:%d %H:%M:%S") # Placeholder
-        exif_data['Make'] = "Unknown" # Placeholder
-        exif_data['Model'] = "Unknown" # Placeholder
-        logger.info(f"Extracted placeholder EXIF: {exif_data}")
+        with open(file_path, 'rb') as f:
+            tags = exifread.process_file(f, details=False) # details=False is faster
+
+        if not tags:
+            logger.warning(f"No EXIF information found in {file_path}")
+            return exif_data
+
+        # Extract specific tags and convert them to strings
+        if 'EXIF DateTimeOriginal' in tags:
+            exif_data['DateTimeOriginal'] = str(tags['EXIF DateTimeOriginal'])
+        if 'Image Make' in tags:
+            exif_data['Make'] = str(tags['Image Make'])
+        if 'Image Model' in tags:
+            exif_data['Model'] = str(tags['Image Model'])
+        
+        logger.info(f"Extracted EXIF: {exif_data}")
+
     except Exception as e:
         logger.error(f"Error extracting EXIF from {file_path}: {e}")
+    
     return exif_data
 
 def get_llm_description(file_path, model_name):
