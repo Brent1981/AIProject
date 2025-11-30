@@ -15,6 +15,13 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  - job_name: 'node-exporter'
+  - job_name: 'utility_hub_node' # Renamed for clarity
     static_configs:
       - targets: ['node-exporter:9100']
+
+  - job_name: 'ai_powerhouse_node'
+    # This job scrapes the node-exporter on the AI Powerhouse server.
+    # IMPORTANT: Replace <AI_POWERHOUSE_IP> with the actual IP address of your AI Powerhouse.
+    # This can also be managed via Ansible templating in the future.
+    static_configs:
+      - targets: ['<AI_POWERHOUSE_IP>:9100']
