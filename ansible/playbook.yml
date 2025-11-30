@@ -56,7 +56,7 @@
     #
     - name: Clone the aiproject repository
       ansible.builtin.git:
-        repo: <YOUR_GIT_REPO_URL> # IMPORTANT: Replace with your git repository URL
+        repo: https://github.com/Brent1981/AIProject.git
         dest: /home/{{ ansible_user }}/aiproject
         version: main
         force: yes
