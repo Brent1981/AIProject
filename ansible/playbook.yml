@@ -29,27 +29,109 @@
         state: present
       tags: ['packages', 'nfs']
 
-    #
     # --- Docker Installation ---
-    # These tasks would automate the installation of Docker Engine.
-    # For brevity, these are represented as a placeholder. The actual tasks involve
-    # adding the Docker repository, GPG key, and installing the docker-ce packages.
-    #
-    - name: Install Docker (Placeholder)
-      ansible.builtin.debug:
-        msg: "This step would contain tasks to install Docker Engine."
-      tags: ['docker']
+    - name: Install prerequisites for Docker repository
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
 
-    #
+    - name: Create directory for apt keyrings
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Add Docker's official GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+        force: true
+
+    - name: Add Docker's repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+
+    - name: Install Docker Engine and plugins
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Ensure Docker service is started and enabled
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add user to the docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+      tags: ['docker', 'users']
+
     # --- NVIDIA Driver & Container Toolkit Installation ---
-    # This is a critical and complex step. It would involve detecting the GPU,
-    # adding the NVIDIA repository, and installing the correct driver version
-    # and the NVIDIA Container Toolkit.
-    #
-    - name: Install NVIDIA Drivers and Container Toolkit (Placeholder)
-      ansible.builtin.debug:
-        msg: "This step would contain tasks to install NVIDIA components."
+    # NOTE: NVIDIA driver installation can be sensitive. These tasks are based on
+    # standard procedures for Ubuntu and may need adjustment.
+    - name: Add NVIDIA's GPG key
+      ansible.builtin.get_url:
+        url: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub
+        dest: /etc/apt/keyrings/nvidia-cuda.asc
+        mode: '0644'
+        force: true
       tags: ['nvidia', 'docker']
+
+    - name: Add NVIDIA's repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/nvidia-cuda.asc] https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ /"
+        state: present
+        filename: nvidia-cuda
+      tags: ['nvidia', 'docker']
+
+    - name: Install NVIDIA driver and toolkit
+      ansible.builtin.apt:
+        name:
+          - cuda-drivers
+          - nvidia-container-toolkit
+        state: present
+        update_cache: yes
+      tags: ['nvidia', 'docker']
+
+    - name: Configure Docker to use the NVIDIA runtime
+      ansible.builtin.copy:
+        dest: /etc/docker/daemon.json
+        content: |
+          {
+            "runtimes": {
+              "nvidia": {
+                "path": "/usr/bin/nvidia-container-runtime",
+                "runtimeArgs": []
+              }
+            },
+            "default-runtime": "nvidia"
+          }
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart Docker
+      tags: ['nvidia', 'docker']
+
+  handlers:
+    - name: Restart Docker
+      ansible.builtin.service:
+        name: docker
+        state: restarted
 
     #
     # --- Application Code Checkout ---
