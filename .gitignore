@@ -1,0 +1,41 @@
+# Environment variables
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+/finetuning_venv/
+/ai_engine/venv/
+
+# Docker
+docker-compose.override.yml
+
+# Backups
+/backups/
+
+# IDE / Editor specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data volumes (if ever mapped locally)
+/ollama_models/
+/chromadb_data/
+/n8n_data/
+/grafana_data/
+/prometheus_data/
+/loki_data/
+/portainer_data/
+/mosquitto/data/
+/mosquitto/log/
+/sunshine_config/
+/organized_files/
+/file_intake/
+/ha_config/

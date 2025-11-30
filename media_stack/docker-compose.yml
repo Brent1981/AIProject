@@ -1,0 +1,87 @@
+version: "3.8"
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC # Change to your timezone, e.g., America/New_York
+      - JELLYFIN_PublishedServerUrl=http://<YOUR_SERVER_IP> # Optional: Replace with your server's IP
+    volumes:
+      - /srv/data/config/jellyfin:/config
+      - /srv/data/media/tv:/data/tvshows
+      - /srv/data/media/movies:/data/movies
+    ports:
+      - "8096:8096" # Jellyfin Web UI
+      - "8920:8920" # Optional: For HTTPS
+      - "7359:7359/udp" # Optional: For client discovery
+      - "1900:1900/udp" # Optional: For DLNA
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC # Change to your timezone
+    volumes:
+      - /srv/data/config/sonarr:/config
+      - /srv/data/media/tv:/tv # Sonarr will see this path
+      - /srv/data/downloads:/downloads # Sonarr will see this path
+    ports:
+      - "8989:8989" # Sonarr Web UI
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC # Change to your timezone
+    volumes:
+      - /srv/data/config/radarr:/config
+      - /srv/data/media/movies:/movies # Radarr will see this path
+      - /srv/data/downloads:/downloads # Radarr will see this path
+    ports:
+      - "7878:7878" # Radarr Web UI
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC # Change to your timezone
+    volumes:
+      - /srv/data/config/prowlarr:/config
+    ports:
+      - "9696:9696" # Prowlarr Web UI
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC # Change to your timezone
+      - WEBUI_PORT=8080
+    volumes:
+      - /srv/data/config/qbittorrent:/config
+      - /srv/data/downloads:/downloads
+    ports:
+      - "8081:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    restart: unless-stopped

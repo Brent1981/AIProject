@@ -1,0 +1,10 @@
+requests
+pytz
+Flask
+chromadb-client
+sentence-transformers
+onnxruntime
+ddgs
+python-dotenv
+gunicorn
+numexpr

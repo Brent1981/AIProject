@@ -1,0 +1,197 @@
+# AI Powerhouse Docker Compose
+# This stack is designed to run on your high-spec server with the powerful CPUs, 256GB RAM, and the RTX 3060.
+
+services:
+  ai_engine:
+    build: ../ai_engine
+    container_name: ai_engine
+    ports:
+      - "5000:5000"
+    env_file:
+      - ../ai_engine/.env
+    # The OLLAMA_URL and CHROMADB_URL should point to the services within this stack.
+    # The HA_URL and HA_TOKEN will need to point to the Utility Hub's IP address.
+    # Example in ai_engine/.env: HA_URL=http://<UTILITY_HUB_IP>:8123
+    depends_on:
+      - chromadb
+      - ollama
+    networks:
+      - ai_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  chromadb:
+    build: ../chromadb_custom
+    container_name: chromadb
+    ports:
+      - "8001:8000"
+    volumes:
+      - chromadb_data:/chroma/data
+    networks:
+      - ai_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v2/heartbeat"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+    restart: unless-stopped
+
+  ollama:
+    build: ../ollama_custom
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    # This is where you enable GPU access for Ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - ai_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  ollama-webui:
+    image: ghcr.io/ollama-webui/ollama-webui:main
+    container_name: ollama-webui
+    ports:
+      - "8080:8080"
+    environment:
+      - 'OLLAMA_API_BASE_URL=http://ollama:11434'
+    volumes:
+      - ollama_webui_data:/app/backend/data
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    networks:
+      - ai_network
+
+  file_sorter:
+    build: ../file_sorter
+    container_name: file_sorter
+    ports:
+      - "5001:5001"
+    environment:
+      - OLLAMA_API_BASE_URL=http://ollama:11434
+      - LLAVA_MODEL_NAME=llava
+      - OCR_MODEL_NAME=llava
+      - TARGET_BASE_DIR=/organized_files
+      - LOG_FILE=/var/log/file_sorter.log
+    volumes:
+      - file_intake:/intake:ro
+      - organized_files:/organized_files
+      - /var/log/file_sorter:/var/log/file_sorter
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    networks:
+      - ai_network
+
+  sunshine:
+    image: lscr.io/linuxserver/sunshine:latest
+    container_name: sunshine
+    ports:
+      - "47989:47989/tcp"
+      - "47990:47990/tcp"
+      - "47991:47991/tcp"
+      - "47992:47992/tcp"
+      - "443:47984/tcp"
+      - "47998:47998/udp"
+      - "47999:47999/udp"
+      - "48000:48000/udp"
+      - "48010:48010/udp"
+    volumes:
+      - sunshine_config:/config
+      - /dev/dri:/dev/dri
+      - /run/udev:/run/udev:ro
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    privileged: true
+    restart: unless-stopped
+    networks:
+      - ai_network
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    ports:
+      - "9443:9443"
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    restart: unless-stopped
+    networks:
+      - ai_network
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    networks:
+      - ai_network
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      # You will need a promtail config here that points to the Loki instance on the Utility Hub
+      # Example: client: url: http://<UTILITY_HUB_IP>:3100/loki/api/v1/push
+      - ../monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    restart: unless-stopped
+    networks:
+      - ai_network
+
+volumes:
+  chromadb_data:
+  ollama_models:
+  ollama_webui_data:
+  organized_files:
+  sunshine_config:
+  portainer_data:
+
+  # IMPORTANT: The 'file_intake' volume is now an NFS mount from your TrueNAS server.
+  # You must have the NFS client tools installed on this AI Powerhouse server's host OS
+  # (e.g., `sudo apt-get install nfs-common`).
+  #
+  # Replace <TRUENAS_IP> with the actual IP address of your TrueNAS server.
+  # The path `/mnt/mainpool/ai_data` should match the path you shared via NFS on TrueNAS.
+  file_intake:
+    driver_opts:
+      type: "nfs"
+      o: "addr=<TRUENAS_IP>,nolock,soft,ro" # 'ro' for read-only access
+      device: ":/mnt/mainpool/ai_data"
+
+
+networks:
+  ai_network:
+    driver: bridge

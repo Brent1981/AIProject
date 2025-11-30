@@ -1,0 +1,24 @@
+# This is an Ansible inventory template.
+# Copy this file to 'inventory.ini' and replace the placeholders with the actual IP addresses of your servers.
+
+[ai_powerhouse]
+# The primary server for AI workloads.
+powerhouse-01 ansible_host=<AI_POWERHOUSE_IP>
+
+[truenas_server]
+# The TrueNAS server, primarily for storage and utility apps.
+truenas-01 ansible_host=<TRUENAS_IP>
+
+# --- Ansible Connection Variables ---
+# These variables tell Ansible how to connect to your servers.
+# You might need to adjust these based on your setup.
+[all:vars]
+# The username Ansible will use to SSH into the servers.
+ansible_user=brent
+
+# Uncomment the line below if your user requires a password for sudo.
+# Ansible will prompt for the password when you run the playbook.
+# ansible_become_password_file = /path/to/your/vault/password/file or set ansible_ask_become_pass=true
+
+# Tells Ansible to use the 'sudo' method to gain root privileges for tasks.
+ansible_become_method=sudo

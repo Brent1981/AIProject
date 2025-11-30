@@ -1,0 +1,85 @@
+# Ansible Playbook for Setting Up the AI Powerhouse Server
+# This playbook automates the complete setup of the AI server.
+
+- name: Provision AI Powerhouse Server
+  hosts: ai_powerhouse
+  become: true # This tells Ansible to run tasks with root privileges (using sudo)
+
+  tasks:
+    - name: Update apt package cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600 # One hour
+      tags: ['packages']
+
+    - name: Install common system packages
+      ansible.builtin.apt:
+        name:
+          - git
+          - vim
+          - curl
+          - wget
+          - htop
+        state: present
+      tags: ['packages']
+
+    - name: Install NFS client tools
+      ansible.builtin.apt:
+        name: nfs-common
+        state: present
+      tags: ['packages', 'nfs']
+
+    #
+    # --- Docker Installation ---
+    # These tasks would automate the installation of Docker Engine.
+    # For brevity, these are represented as a placeholder. The actual tasks involve
+    # adding the Docker repository, GPG key, and installing the docker-ce packages.
+    #
+    - name: Install Docker (Placeholder)
+      ansible.builtin.debug:
+        msg: "This step would contain tasks to install Docker Engine."
+      tags: ['docker']
+
+    #
+    # --- NVIDIA Driver & Container Toolkit Installation ---
+    # This is a critical and complex step. It would involve detecting the GPU,
+    # adding the NVIDIA repository, and installing the correct driver version
+    # and the NVIDIA Container Toolkit.
+    #
+    - name: Install NVIDIA Drivers and Container Toolkit (Placeholder)
+      ansible.builtin.debug:
+        msg: "This step would contain tasks to install NVIDIA components."
+      tags: ['nvidia', 'docker']
+
+    #
+    # --- Application Code Checkout ---
+    #
+    - name: Clone the aiproject repository
+      ansible.builtin.git:
+        repo: <YOUR_GIT_REPO_URL> # IMPORTANT: Replace with your git repository URL
+        dest: /home/{{ ansible_user }}/aiproject
+        version: main
+        force: yes
+      become_user: "{{ ansible_user }}"
+      tags: ['app']
+
+    #
+    # --- Environment Configuration ---
+    #
+    - name: Copy environment file from template
+      ansible.builtin.template:
+        src: ../.env.template # Assumes you run ansible from the project root
+        dest: /home/{{ ansible_user }}/aiproject/.env
+      become_user: "{{ ansible_user }}"
+      tags: ['app', 'config']
+
+    #
+    # --- Deploy Application Stack ---
+    #
+    - name: Start the AI Powerhouse Docker stack
+      ansible.builtin.command:
+        cmd: /home/{{ ansible_user }}/aiproject/ai_powerhouse/scripts/start.sh
+      args:
+        chdir: /home/{{ ansible_user }}/aiproject/ai_powerhouse/scripts/
+      become_user: "{{ ansible_user }}"
+      tags: ['app', 'deploy']

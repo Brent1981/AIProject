@@ -1,0 +1,8 @@
+requests
+paho-mqtt
+pytz
+Flask
+chromadb-client
+sentence-transformers
+onnxruntime
+ddgs
