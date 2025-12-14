@@ -13,6 +13,9 @@ ingester:
   chunk_idle_period: 1m
   chunk_target_size: 1024000
   max_chunk_age: 1h
+  wal:
+    enabled: true
+    dir: ./wal
 
 schema_config:
   configs:
@@ -26,14 +29,17 @@ schema_config:
 
 storage_config:
   boltdb_shipper:
-    active_index_directory: /loki/boltdb-shipper-active
-    cache_location: /loki/boltdb-shipper-cache
+    active_index_directory: ./boltdb-shipper-active
+    cache_location: ./boltdb-shipper-cache
     cache_ttl: 24h
-    shared_store: filesystem
   filesystem:
-    directory: /loki/chunks
+    directory: ./chunks
+
+compactor:
+  working_directory: ./compactor
+
 
 limits_config:
-  enforce_metric_name: false
   reject_old_samples: true
   reject_old_samples_max_age: 168h
+  allow_structured_metadata: false

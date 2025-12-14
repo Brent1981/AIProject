@@ -39,3 +39,8 @@ docker-compose.override.yml
 /organized_files/
 /file_intake/
 /ha_config/
+
+# New additions
+media_stack/data/
+monitoring/loki/data/
+retro_gaming/

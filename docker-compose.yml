@@ -42,10 +42,15 @@ services:
     container_name: ollama
     ports:
       - "11434:11434"
-    volumes:
-      - ollama_models:/root/.ollama
     networks:
       - ai_network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
       interval: 30s
@@ -139,32 +144,9 @@ services:
     networks:
       - ai_network
 
-  loki:
-    image: grafana/loki:latest
-    container_name: loki
-    ports:
-      - "3100:3100"
-    volumes:
-      - ./monitoring/loki/loki-config.yml:/etc/loki/config.yml
-      - loki_data:/loki
-    command: -config.file=/etc/loki/config.yml
-    restart: unless-stopped
-    networks:
-      - ai_network
 
-  promtail:
-    image: grafana/promtail:latest
-    container_name: promtail
-    volumes:
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
-    command: -config.file=/etc/promtail/config.yml
-    restart: unless-stopped
-    depends_on:
-      - loki
-    networks:
-      - ai_network
+
+
 
   alertmanager:
     image: prom/alertmanager:latest
@@ -200,32 +182,32 @@ services:
     networks:
       - ai_network
 
-  sunshine:
-    image: lscr.io/linuxserver/sunshine:latest
-    container_name: sunshine
-    ports:
-      - "47989:47989/tcp" # Sunshine Web UI
-      - "47990:47990/tcp" # Sunshine Stream
-      - "47991:47991/tcp" # Sunshine Stream
-      - "47992:47992/tcp" # Sunshine Stream
-      - "443:47984/tcp" # HTTPS for pairing (optional, but good to have)
-      - "47998:47998/udp" # Sunshine Stream
-      - "47999:47999/udp" # Sunshine Stream
-      - "48000:48000/udp" # Sunshine Stream
-      - "48010:48010/udp" # Sunshine Stream
-    volumes:
-      - sunshine_config:/config
-      - /dev/dri:/dev/dri # For GPU access
-      - /run/udev:/run/udev:ro # For udev events (input devices)
-      - /path/to/your/games:/games # IMPORTANT: Change this to your actual games/ROMs directory
-    environment:
-      - PUID=1000 # IMPORTANT: Change to your user's UID
-      - PGID=1000 # IMPORTANT: Change to your user's GID
-      - TZ=America/New_York # IMPORTANT: Change to your timezone
-    privileged: true # Required for GPU access and input device handling
-    restart: unless-stopped
-    networks:
-      - ai_network
+#  sunshine:
+#    image: lscr.io/linuxserver/sunshine:latest
+#    container_name: sunshine
+#    ports:
+#      - "47989:47989/tcp" # Sunshine Web UI
+#      - "47990:47990/tcp" # Sunshine Stream
+#      - "47991:47991/tcp" # Sunshine Stream
+#      - "47992:47992/tcp" # Sunshine Stream
+#      - "443:47984/tcp" # HTTPS for pairing (optional, but good to have)
+#      - "47998:47998/udp" # Sunshine Stream
+#      - "47999:47999/udp" # Sunshine Stream
+#      - "48000:48000/udp" # Sunshine Stream
+#      - "48010:48010/udp" # Sunshine Stream
+#    volumes:
+#      - sunshine_config:/config
+#      - /dev/dri:/dev/dri # For GPU access
+#      - /run/udev:/run/udev:ro # For udev events (input devices)
+#      - /path/to/your/games:/games # IMPORTANT: Change this to your actual games/ROMs directory
+#    environment:
+#      - PUID=1000 # IMPORTANT: Change to your user's UID
+#      - PGID=1000 # IMPORTANT: Change to your user's GID
+#      - TZ=America/New_York # IMPORTANT: Change to your timezone
+#    privileged: true # Required for GPU access and input device handling
+#    restart: unless-stopped
+#    networks:
+#      - ai_network
 
 volumes:
   chromadb_data:
@@ -236,10 +218,10 @@ volumes:
   ollama_webui_data:
   prometheus_data:
   grafana_data:
-  loki_data:
+
   alertmanager_data:
   organized_files:
-  sunshine_config: # Add this new volume
+  #sunshine_config: # Add this new volume
 
 networks:
   ai_network:

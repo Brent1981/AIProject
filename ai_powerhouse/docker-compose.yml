@@ -100,31 +100,31 @@ services:
     networks:
       - ai_network
 
-  sunshine:
-    image: lscr.io/linuxserver/sunshine:latest
-    container_name: sunshine
-    ports:
-      - "47989:47989/tcp"
-      - "47990:47990/tcp"
-      - "47991:47991/tcp"
-      - "47992:47992/tcp"
-      - "443:47984/tcp"
-      - "47998:47998/udp"
-      - "47999:47999/udp"
-      - "48000:48000/udp"
-      - "48010:48010/udp"
-    volumes:
-      - sunshine_config:/config
-      - /dev/dri:/dev/dri
-      - /run/udev:/run/udev:ro
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=America/New_York
-    privileged: true
-    restart: unless-stopped
-    networks:
-      - ai_network
+  # sunshine:
+  #   image: lscr.io/linuxserver/sunshine:latest
+  #   container_name: sunshine
+  #   ports:
+  #     - "47989:47989/tcp"
+  #     - "47990:47990/tcp"
+  #     - "47991:47991/tcp"
+  #     - "47992:47992/tcp"
+  #     - "443:47984/tcp"
+  #     - "47998:47998/udp"
+  #     - "47999:47999/udp"
+  #     - "48000:48000/udp"
+  #     - "48010:48010/udp"
+  #   volumes:
+  #     - sunshine_config:/config
+  #     - /dev/dri:/dev/dri
+  #     - /run/udev:/run/udev:ro
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=America/New_York
+  #   privileged: true
+  #   restart: unless-stopped
+  #   networks:
+  #     - ai_network
 
   portainer:
     image: portainer/portainer-ce:latest

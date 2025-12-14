@@ -1,17 +1,30 @@
 version: "3.8"
 services:
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    env_file:
+      - ./.env
+    ports:
+      - "8081:8080/tcp" # qBittorrent Web UI
+      - "6881:6881/tcp" # qBittorrent
+      - "6881:6881/udp" # qBittorrent
+    restart: unless-stopped
+
   jellyfin:
     image: lscr.io/linuxserver/jellyfin:latest
     container_name: jellyfin
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=Etc/UTC # Change to your timezone, e.g., America/New_York
-      - JELLYFIN_PublishedServerUrl=http://<YOUR_SERVER_IP> # Optional: Replace with your server's IP
+      - TZ=Etc/UTC # IMPORTANT: Change to your timezone, e.g., America/New_York
+      - JELLYFIN_PublishedServerUrl=http://<YOUR_SERVER_IP> # Optional: Replace with your server's IP for external access
     volumes:
-      - /srv/data/config/jellyfin:/config
-      - /srv/data/media/tv:/data/tvshows
-      - /srv/data/media/movies:/data/movies
+      - ./data/config/jellyfin:/config
+      - ./data/media/tv:/data/tvshows
+      - ./data/media/movies:/data/movies
     ports:
       - "8096:8096" # Jellyfin Web UI
       - "8920:8920" # Optional: For HTTPS
@@ -32,11 +45,11 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=Etc/UTC # Change to your timezone
+      - TZ=Etc/UTC # IMPORTANT: Change to your timezone
     volumes:
-      - /srv/data/config/sonarr:/config
-      - /srv/data/media/tv:/tv # Sonarr will see this path
-      - /srv/data/downloads:/downloads # Sonarr will see this path
+      - ./data/config/sonarr:/config
+      - ./data/media/tv:/tv # Sonarr will see this path
+      - ./data/downloads:/downloads # Sonarr will see this path
     ports:
       - "8989:8989" # Sonarr Web UI
     restart: unless-stopped
@@ -47,11 +60,11 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=Etc/UTC # Change to your timezone
+      - TZ=Etc/UTC # IMPORTANT: Change to your timezone
     volumes:
-      - /srv/data/config/radarr:/config
-      - /srv/data/media/movies:/movies # Radarr will see this path
-      - /srv/data/downloads:/downloads # Radarr will see this path
+      - ./data/config/radarr:/config
+      - ./data/media/movies:/movies # Radarr will see this path
+      - ./data/downloads:/downloads # Radarr will see this path
     ports:
       - "7878:7878" # Radarr Web UI
     restart: unless-stopped
@@ -62,9 +75,9 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=Etc/UTC # Change to your timezone
+      - TZ=Etc/UTC # IMPORTANT: Change to your timezone
     volumes:
-      - /srv/data/config/prowlarr:/config
+      - ./data/config/prowlarr:/config
     ports:
       - "9696:9696" # Prowlarr Web UI
     restart: unless-stopped
@@ -72,16 +85,15 @@ services:
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
+    network_mode: "service:gluetun"
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=Etc/UTC # Change to your timezone
+      - TZ=Etc/UTC # IMPORTANT: Change to your timezone
       - WEBUI_PORT=8080
     volumes:
-      - /srv/data/config/qbittorrent:/config
-      - /srv/data/downloads:/downloads
-    ports:
-      - "8081:8080"
-      - "6881:6881"
-      - "6881:6881/udp"
+      - ./data/config/qbittorrent:/config
+      - ./data/downloads:/downloads
+    depends_on:
+      - gluetun
     restart: unless-stopped

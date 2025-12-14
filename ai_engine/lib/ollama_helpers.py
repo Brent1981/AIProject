@@ -1,6 +1,7 @@
 # ai_engine/lib/ollama_helpers.py
 import os
 import requests
+import traceback
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL")
 
@@ -19,4 +20,7 @@ def call_ollama(prompt, model):
         return response.json().get("response", "No response field found in Ollama reply.")
     except requests.exceptions.RequestException as e:
         print(f"Error calling Ollama API: {e}")
+        print("-- FULL TRACEBACK --")
+        traceback.print_exc()
+        print("-- END TRACEBACK --")
         return f"Error: Could not connect to Ollama at {OLLAMA_URL}."
