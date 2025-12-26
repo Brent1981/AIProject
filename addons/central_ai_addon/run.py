@@ -41,11 +41,15 @@ def on_connect(client, userdata, flags, rc, properties):
         client.publish(AVAILABILITY_TOPIC, "online", retain=True)
         client.subscribe(COMMAND_TOPIC)
         print(f"Subscribed to command topic: {COMMAND_TOPIC}")
+        
+        # Enhanced Discovery Payload
         discovery_payload = {
             "name": "Central AI Response",
             "unique_id": "central_ai_response_sensor",
             "state_topic": STATE_TOPIC,
             "availability_topic": AVAILABILITY_TOPIC,
+            "json_attributes_topic": STATE_TOPIC, # Use the same topic for attributes
+            "value_template": "{{ value_json.state }}", # Extract short state
             "icon": "mdi:brain",
             "device": {
                 "identifiers": ["central_ai_addon"],
@@ -77,20 +81,35 @@ def on_message(client, userdata, msg):
         response.raise_for_status()
         
         ai_response = response.json().get("response", "No response from AI Engine.")
-        print(f"Received response from AI Engine: {ai_response}")
+        print(f"Received response from AI Engine (Length: {len(ai_response)})")
 
-        # Publish the AI Engine's response back to Home Assistant
-        client.publish(STATE_TOPIC, ai_response, retain=False)
+        # Construct JSON Payload to bypass 255 char limit
+        # The 'state' will be short, the 'full_response' attribute will hold the text
+        mqtt_payload = {
+            "state": ai_response[:200] + "..." if len(ai_response) > 255 else ai_response,
+            "full_response": ai_response
+        }
+
+        # Publish the JSON object
+        client.publish(STATE_TOPIC, json.dumps(mqtt_payload), retain=False)
 
     except requests.exceptions.RequestException as e:
         print(f"Error calling AI Engine: {e}")
-        client.publish(STATE_TOPIC, f"Error connecting to AI Engine: {e}", retain=False)
+        error_payload = {
+            "state": "Error",
+            "full_response": f"Error connecting to AI Engine: {e}"
+        }
+        client.publish(STATE_TOPIC, json.dumps(error_payload), retain=False)
     except Exception as e:
         print(f"--- UNCAUGHT EXCEPTION IN on_message ---")
         print(f"ERROR TYPE: {type(e)}")
         print(f"ERROR: {e}")
         traceback.print_exc()
-        client.publish(STATE_TOPIC, "An error occurred in the AI addon.", retain=False)
+        error_payload = {
+            "state": "Error",
+            "full_response": "An unexpected error occurred in the AI addon."
+        }
+        client.publish(STATE_TOPIC, json.dumps(error_payload), retain=False)
 
 def main():
     """Main function to set up and run the MQTT client."""

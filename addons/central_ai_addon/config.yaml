@@ -1,5 +1,5 @@
 name: "Central AI Brain"
-version: "0.11.0"
+version: "0.11.1"
 slug: "central_ai_addon"
 description: "A central AI service using Ollama to provide intelligence to Home Assistant."
 arch:
